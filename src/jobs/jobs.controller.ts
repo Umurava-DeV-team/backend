@@ -4,13 +4,14 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { CreateJobDto } from './job.dto';
+import { CreateJobDto, UpdateJobDto } from './job.dto';
 import { JobsService } from './jobs.service';
 
 @ApiTags('Jobs')
@@ -36,6 +37,18 @@ export class JobsController {
   @ApiOperation({ summary: 'Get a job posting by ID' })
   findOne(@Param('id') id: string) {
     return this.jobsService.findOne(id);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update a job posting' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file'))
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateJobDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.jobsService.update(id, dto, file);
   }
 
   @Delete(':id')

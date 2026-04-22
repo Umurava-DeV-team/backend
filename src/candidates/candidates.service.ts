@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { CreateCandidateDto } from './candidate.dto';
+import { CreateCandidateDto, UpdateCandidateDto } from './candidate.dto';
 import { Candidate, CandidateDocument } from './candidate.schema';
 
 @Injectable()
@@ -23,6 +23,12 @@ export class CandidatesService {
 
   async findOne(id: string): Promise<CandidateDocument> {
     const candidate = await this.candidateModel.findById(id);
+    if (!candidate) throw new NotFoundException(`Candidate ${id} not found`);
+    return candidate;
+  }
+
+  async update(id: string, dto: UpdateCandidateDto): Promise<CandidateDocument> {
+    const candidate = await this.candidateModel.findByIdAndUpdate(id, dto, { new: true });
     if (!candidate) throw new NotFoundException(`Candidate ${id} not found`);
     return candidate;
   }

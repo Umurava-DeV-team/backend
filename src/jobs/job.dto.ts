@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsOptional, IsEnum, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ExperienceLevel } from './job.schema';
@@ -43,3 +43,5 @@ export class CreateJobDto {
   @IsOptional()
   descriptionFileUrl?: string;
 }
+
+export class UpdateJobDto extends PartialType(CreateJobDto) {}

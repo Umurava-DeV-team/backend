@@ -51,3 +51,6 @@ export class CreateCandidateDto {
   @IsOptional()
   jobId?: string;
 }
+
+import { PartialType } from '@nestjs/swagger';
+export class UpdateCandidateDto extends PartialType(CreateCandidateDto) {}

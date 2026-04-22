@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   UploadedFile,
@@ -14,7 +15,7 @@ import { ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { memoryStorage } from 'multer';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pdfParse = require('pdf-parse');
-import { CreateCandidateDto } from './candidate.dto';
+import { CreateCandidateDto, UpdateCandidateDto } from './candidate.dto';
 import { CandidatesService } from './candidates.service';
 
 @ApiTags('Candidates')
