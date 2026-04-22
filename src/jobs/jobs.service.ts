@@ -8,7 +8,7 @@ import { Job, JobDocument } from './job.schema';
 export class JobsService {
   constructor(@InjectModel(Job.name) private jobModel: Model<JobDocument>) {}
 
-  async create(dto: CreateJobDto): Promise<JobDocument> {
+  async create(dto: CreateJobDto, file?: Express.Multer.File): Promise<JobDocument> {
     const job = new this.jobModel(dto);
     return job.save();
   }
