@@ -55,6 +55,8 @@ export class ScreeningController {
       this.candidatesService.create({
         name: row.name || row.Name || '',
         email: row.email || row.Email || '',
+        currentRole: row.currentRole || row.CurrentRole || row['Current Role'] || '',
+        location: row.location || row.Location || '',
         phone: row.phone || row.Phone || '',
         skills: (row.skills || row.Skills || '').split(',').map((s: string) => s.trim()),
         experience: row.experience || row.Experience || '',
@@ -90,7 +92,7 @@ export class ScreeningController {
     this.jobsService.findOne(jobId);
     const parsed = await pdfParse(file.buffer);
     const candidate = this.candidatesService.create(
-      { name, email, jobId },
+      { name, email, currentRole: '', location: '', jobId },
       parsed.text,
     );
     return candidate;

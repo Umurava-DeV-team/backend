@@ -35,11 +35,11 @@ You are an expert AI recruiter. Analyze the following job description and candid
 
 JOB POSTING:
 Title: ${job.title}
+Department: ${job.department ?? ''}
 Description: ${job.description}
-Required Skills: ${job.requiredSkills.join(', ')}
-Experience Required: ${job.experienceRequired}
-Education Required: ${job.educationRequired}
+Experience Level: ${job.experienceLevel ?? ''}
 Location: ${job.location}
+Salary Range: ${job.salaryRange ?? ''}
 
 CANDIDATES:
 ${JSON.stringify(candidateProfiles, null, 2)}

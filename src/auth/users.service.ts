@@ -18,7 +18,7 @@ export class UsersService {
       name: dto.name,
       email: dto.email.toLowerCase(),
       passwordHash,
-      role: dto.role ?? UserRole.RECRUITER,
+      role: UserRole.RECRUITER,
       company: dto.company,
     });
     return user.save();
