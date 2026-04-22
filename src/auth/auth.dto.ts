@@ -6,38 +6,79 @@ export enum UserRole {
   CANDIDATE = 'candidate',
 }
 
-export class RegisterDto {
+// Candidate: Name, Email, Phone, Password
+export class RegisterCandidateDto {
   @ApiProperty({ example: 'Jane Doe' })
   @IsString()
   @IsNotEmpty()
   name: string;
 
-  @ApiProperty({ example: 'jane@company.com' })
+  @ApiProperty({ example: 'jane@example.com' })
   @IsEmail()
   email: string;
 
-  @ApiProperty({ example: 'securepassword123', minLength: 6 })
-  @IsString()
-  @MinLength(6)
-  password: string;
-
-  @ApiProperty({ enum: UserRole, example: UserRole.RECRUITER })
-  @IsEnum(UserRole)
-  role: UserRole;
-
-  // Candidate-specific
   @ApiPropertyOptional({ example: '+250788000000' })
   @IsString()
   @IsOptional()
   phone?: string;
 
-  // Recruiter-specific
-  @ApiPropertyOptional({ example: 'Acme Corp' })
+  @ApiProperty({ example: 'securepassword123', minLength: 6 })
+  @IsString()
+  @MinLength(6)
+  password: string;
+}
+
+// Recruiter: Full Name, Work Email, Company, Role/Title, Password
+export class RegisterRecruiterDto {
+  @ApiProperty({ example: 'John Smith' })
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+
+  @ApiProperty({ example: 'john@company.com' })
+  @IsEmail()
+  email: string;
+
+  @ApiProperty({ example: 'Acme Corp' })
+  @IsString()
+  @IsNotEmpty()
+  company: string;
+
+  @ApiProperty({ example: 'Engineering Manager' })
+  @IsString()
+  @IsNotEmpty()
+  jobTitle: string;
+
+  @ApiProperty({ example: 'securepassword123', minLength: 6 })
+  @IsString()
+  @MinLength(6)
+  password: string;
+}
+
+// Keep a unified RegisterDto for internal use
+export class RegisterDto {
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+
+  @IsEmail()
+  email: string;
+
+  @IsString()
+  @MinLength(6)
+  password: string;
+
+  @IsEnum(UserRole)
+  role: UserRole;
+
+  @IsString()
+  @IsOptional()
+  phone?: string;
+
   @IsString()
   @IsOptional()
   company?: string;
 
-  @ApiPropertyOptional({ example: 'Engineering Manager' })
   @IsString()
   @IsOptional()
   jobTitle?: string;
