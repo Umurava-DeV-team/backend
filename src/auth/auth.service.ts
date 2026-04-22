@@ -15,7 +15,7 @@ export class AuthService {
     const id = user._id.toString();
     const token = this.jwtService.sign({ sub: id, email: user.email, role: user.role });
     return {
-      user: { id, name: user.name, email: user.email, role: user.role, company: user.company },
+      user: { id, name: user.name, email: user.email, role: user.role, phone: user.phone, company: user.company, jobTitle: user.jobTitle },
       token,
     };
   }
@@ -30,7 +30,7 @@ export class AuthService {
     const id = user._id.toString();
     const token = this.jwtService.sign({ sub: id, email: user.email, role: user.role });
     return {
-      user: { id, name: user.name, email: user.email, role: user.role, company: user.company },
+      user: { id, name: user.name, email: user.email, role: user.role, phone: user.phone, company: user.company, jobTitle: user.jobTitle },
       token,
     };
   }

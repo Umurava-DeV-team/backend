@@ -18,8 +18,16 @@ export class User {
   @Prop({ required: true, enum: UserRole })
   role: UserRole;
 
+  // Candidate-specific
+  @Prop()
+  phone?: string;
+
+  // Recruiter-specific
   @Prop()
   company?: string;
+
+  @Prop()
+  jobTitle?: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
