@@ -12,6 +12,12 @@ export class Candidate {
   email: string;
 
   @Prop({ default: '' })
+  currentRole: string;
+
+  @Prop({ default: '' })
+  location: string;
+
+  @Prop({ default: '' })
   phone: string;
 
   @Prop({ type: [String], default: [] })
@@ -26,8 +32,8 @@ export class Candidate {
   @Prop({ default: '' })
   summary: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'Job', required: true })
-  jobId: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: 'Job' })
+  jobId?: Types.ObjectId;
 
   @Prop({ default: '' })
   resumeText: string;

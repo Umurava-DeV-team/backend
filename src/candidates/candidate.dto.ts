@@ -11,6 +11,16 @@ export class CreateCandidateDto {
   @IsEmail()
   email: string;
 
+  @ApiProperty({ example: 'Software Engineer' })
+  @IsString()
+  @IsNotEmpty()
+  currentRole: string;
+
+  @ApiProperty({ example: 'Kigali, Rwanda' })
+  @IsString()
+  @IsNotEmpty()
+  location: string;
+
   @ApiPropertyOptional({ example: '+250788000000' })
   @IsString()
   @IsOptional()
@@ -36,8 +46,8 @@ export class CreateCandidateDto {
   @IsOptional()
   summary?: string;
 
-  @ApiProperty({ example: 'job-uuid-here' })
+  @ApiPropertyOptional({ example: 'job-uuid-here' })
   @IsString()
-  @IsNotEmpty()
-  jobId: string;
+  @IsOptional()
+  jobId?: string;
 }

@@ -11,7 +11,7 @@ export class CandidatesService {
   async create(dto: CreateCandidateDto, resumeText?: string): Promise<CandidateDocument> {
     const candidate = new this.candidateModel({
       ...dto,
-      jobId: new Types.ObjectId(dto.jobId),
+      jobId: dto.jobId ? new Types.ObjectId(dto.jobId) : undefined,
       resumeText: resumeText ?? '',
     });
     return candidate.save();

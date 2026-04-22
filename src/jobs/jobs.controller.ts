@@ -1,5 +1,15 @@
-import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CreateJobDto } from './job.dto';
 import { JobsService } from './jobs.service';
 
@@ -10,8 +20,10 @@ export class JobsController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new job posting' })
-  create(@Body() dto: CreateJobDto) {
-    return this.jobsService.create(dto);
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file'))
+  create(@Body() dto: CreateJobDto, @UploadedFile() file?: Express.Multer.File) {
+    return this.jobsService.create(dto, file);
   }
 
   @Get()
