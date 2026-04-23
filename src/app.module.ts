@@ -6,6 +6,10 @@ import { CandidatesModule } from './candidates/candidates.module';
 import { JobsModule } from './jobs/jobs.module';
 import { ScreeningModule } from './screening/screening.module';
 
+import { ProfileModule } from './profile/profile.module';
+import { ApplicationsModule } from './applications/applications.module';
+import { AssessmentsModule } from './assessments/assessments.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -20,6 +24,9 @@ import { ScreeningModule } from './screening/screening.module';
     JobsModule,
     CandidatesModule,
     ScreeningModule,
+    ProfileModule,
+    ApplicationsModule,
+    AssessmentsModule,
   ],
 })
 export class AppModule {}
