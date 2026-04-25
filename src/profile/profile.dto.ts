@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { IsBoolean, IsEmail, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, MinLength } from 'class-validator';
 import { Type } from 'class-transformer';
-import { Proficiency, SkillType } from './profile.schema';
+import { LanguageProficiency, SkillLevel, SkillType } from './profile.schema';
 
 // ── Basic Info ────────────────────────────────────────────────────────────────
 export class UpdateBasicInfoDto {
@@ -20,12 +20,6 @@ export class UpdateBasicInfoDto {
   @ApiPropertyOptional({ example: 'Passionate engineer...' })
   @IsString() @IsOptional() bio?: string;
 
-  @ApiPropertyOptional({ example: 'jane@example.com' })
-  @IsEmail() @IsOptional() email?: string;
-
-  @ApiPropertyOptional({ example: '+250788000000' })
-  @IsString() @IsOptional() mobileNumber?: string;
-
   @ApiPropertyOptional({ example: 'https://storage.example.com/avatar.jpg' })
   @IsString() @IsOptional() avatarUrl?: string;
 }
@@ -38,8 +32,11 @@ export class AddSkillDto {
   @ApiProperty({ example: 'Node.js' })
   @IsString() @IsNotEmpty() name: string;
 
-  @ApiProperty({ enum: Proficiency, example: Proficiency.EXPERT })
-  @IsEnum(Proficiency) proficiency: Proficiency;
+  @ApiPropertyOptional({ enum: SkillLevel, example: SkillLevel.EXPERT })
+  @IsEnum(SkillLevel) @IsOptional() level?: SkillLevel;
+
+  @ApiPropertyOptional({ enum: LanguageProficiency, example: LanguageProficiency.FLUENT })
+  @IsEnum(LanguageProficiency) @IsOptional() proficiency?: LanguageProficiency;
 
   @ApiPropertyOptional({ example: 3 })
   @Type(() => Number) @IsNumber() @IsOptional() yearsOfExperience?: number;
@@ -62,6 +59,9 @@ export class AddWorkExperienceDto {
 
   @ApiPropertyOptional({ example: false })
   @IsBoolean() @IsOptional() currentlyWorkHere?: boolean;
+
+  @ApiPropertyOptional({ example: 'Is Current' })
+  @IsString() @IsOptional() status?: string;
 
   @ApiPropertyOptional({ example: 'Built and scaled microservices...' })
   @IsString() @IsOptional() description?: string;
@@ -112,7 +112,13 @@ export class AddProjectDto {
   @IsString() @IsNotEmpty() role: string;
 
   @ApiPropertyOptional({ example: 'https://github.com/user/project' })
-  @IsString() @IsOptional() projectUrl?: string;
+  @IsString() @IsOptional() link?: string;
+
+  @ApiPropertyOptional({ example: '2023-01' })
+  @IsString() @IsOptional() startDate?: string;
+
+  @ApiPropertyOptional({ example: '2023-06' })
+  @IsString() @IsOptional() endDate?: string;
 
   @ApiPropertyOptional({ example: 'AI-powered candidate screening platform...' })
   @IsString() @IsOptional() description?: string;

@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
 
 export enum UserRole {
@@ -6,7 +6,7 @@ export enum UserRole {
   CANDIDATE = 'candidate',
 }
 
-// Candidate: Name, Email, Phone, Password
+// Candidate: Name, Email, Password
 export class RegisterCandidateDto {
   @ApiProperty({ example: 'Jane Doe' })
   @IsString()
@@ -17,18 +17,13 @@ export class RegisterCandidateDto {
   @IsEmail()
   email: string;
 
-  @ApiPropertyOptional({ example: '+250788000000' })
-  @IsString()
-  @IsOptional()
-  phone?: string;
-
   @ApiProperty({ example: 'securepassword123', minLength: 6 })
   @IsString()
   @MinLength(6)
   password: string;
 }
 
-// Recruiter: Full Name, Work Email, Company, Role/Title, Password
+// Recruiter: Full Name, Work Email, Company, Password
 export class RegisterRecruiterDto {
   @ApiProperty({ example: 'John Smith' })
   @IsString()
@@ -43,11 +38,6 @@ export class RegisterRecruiterDto {
   @IsString()
   @IsNotEmpty()
   company: string;
-
-  @ApiProperty({ example: 'Engineering Manager' })
-  @IsString()
-  @IsNotEmpty()
-  jobTitle: string;
 
   @ApiProperty({ example: 'securepassword123', minLength: 6 })
   @IsString()
@@ -73,15 +63,7 @@ export class RegisterDto {
 
   @IsString()
   @IsOptional()
-  phone?: string;
-
-  @IsString()
-  @IsOptional()
   company?: string;
-
-  @IsString()
-  @IsOptional()
-  jobTitle?: string;
 }
 
 export class LoginDto {

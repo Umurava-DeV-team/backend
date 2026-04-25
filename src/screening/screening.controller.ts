@@ -22,7 +22,38 @@ export class ScreeningController {
   @Post('run')
   @ApiOperation({ summary: 'Run AI screening for a job — returns ranked shortlist' })
   async run(@Body() dto: ScreenJobDto) {
-    return this.screeningService.screenJob(dto.jobId, dto.topN ?? 10);
+    console.log('Screening request received:', dto);
+    try {
+      return await this.screeningService.screenJob(dto.jobId, dto.topN ?? 10);
+    } catch (err) {
+      console.error('Screening failed:', err.message);
+      throw err;
+    }
+  }
+
+  @Get('history/:jobId')
+  @ApiOperation({ summary: 'Get screening history for a specific job' })
+  async getHistory(@Param('jobId') jobId: string) {
+    return await this.screeningService.getScreeningHistory(jobId);
+  }
+
+  @Get('all')
+  @ApiOperation({ summary: 'Get all screening sessions (Admin/Recruiter)' })
+  async getAll() {
+    return await this.screeningService.getAllScreenings();
+  }
+
+  @Post('launch-assessment')
+  @ApiOperation({ summary: 'Generate AI questions and send assessments to top N candidates for a job' })
+  async launchAssessment(@Body() body: { jobId: string; topN: number; candidateIds: string[]; timeLimitPerQuestion?: number }) {
+    console.log('Assessment launch request:', { jobId: body.jobId, topN: body.topN, count: body.candidateIds?.length, time: body.timeLimitPerQuestion });
+    try {
+      return await this.screeningService.launchAssessment(body.jobId, body.topN ?? 5, body.candidateIds ?? [], body.timeLimitPerQuestion ?? 30);
+    } catch (err) {
+
+      console.error('Assessment launch failed:', err.message);
+      throw err;
+    }
   }
 
   @Post('upload-csv')

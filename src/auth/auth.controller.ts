@@ -17,7 +17,6 @@ export class AuthController {
       email: dto.email,
       password: dto.password,
       role: UserRole.CANDIDATE,
-      phone: dto.phone,
     });
   }
 
@@ -30,7 +29,6 @@ export class AuthController {
       password: dto.password,
       role: UserRole.RECRUITER,
       company: dto.company,
-      jobTitle: dto.jobTitle,
     });
   }
 
@@ -45,6 +43,13 @@ export class AuthController {
   @ApiBearerAuth('JWT')
   @ApiOperation({ summary: 'Get current authenticated user' })
   me(@Request() req: any) {
-    return req.user;
+    // req.user is set by JwtStrategy.validate() — { id, email, role, name }
+    return {
+      id: req.user.id,
+      name: req.user.name,
+      email: req.user.email,
+      role: req.user.role,
+      company: req.user.company,
+    };
   }
 }

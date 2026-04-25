@@ -8,6 +8,10 @@ export class CreateJobDto {
   @IsString()
   @IsNotEmpty()
   title: string;
+  @ApiProperty({ example: 'Umurava' })
+  @IsString()
+  @IsNotEmpty()
+  company: string;
 
   @ApiProperty({ example: 'Engineering' })
   @IsString()

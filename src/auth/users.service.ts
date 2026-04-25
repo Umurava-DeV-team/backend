@@ -19,9 +19,7 @@ export class UsersService {
       email: dto.email.toLowerCase(),
       passwordHash,
       role: dto.role,
-      phone: dto.phone,
       company: dto.company,
-      jobTitle: dto.jobTitle,
     });
     return user.save();
   }

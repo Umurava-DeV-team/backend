@@ -47,18 +47,43 @@ export class CandidatesController {
     @Body() body: any,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    let resumeText: string | undefined;
-    if (file) {
-      const parsed = await pdfParse(file.buffer);
-      resumeText = parsed.text;
+    try {
+      console.log('Creating candidate with body:', body);
+      let resumeText: string | undefined;
+      if (file) {
+        try {
+          const parsed = await pdfParse(file.buffer);
+          resumeText = parsed.text;
+        } catch (pdfErr) {
+          console.error('PDF Parse Error:', pdfErr);
+          // If PDF fails, we still want to save the candidate data
+          resumeText = '';
+        }
+      }
+
+      const skillsStr = body.skills || '';
+      const skills = typeof skillsStr === 'string' 
+        ? skillsStr.split(',').map((s: string) => s.trim()).filter(Boolean)
+        : Array.isArray(skillsStr) ? skillsStr : [];
+
+      const dto: CreateCandidateDto = {
+        name: body.name,
+        email: body.email,
+        currentRole: body.currentRole || '',
+        location: body.location || '',
+        phone: body.phone || '',
+        skills,
+        experience: body.experience || '',
+        education: body.education || '',
+        summary: body.summary || '',
+        jobId: body.jobId,
+      };
+
+      return await this.candidatesService.create(dto, resumeText);
+    } catch (error) {
+      console.error('Candidate creation error:', error);
+      throw error;
     }
-
-    const dto: CreateCandidateDto = {
-      ...body,
-      skills: body.skills ? body.skills.split(',').map((s: string) => s.trim()) : [],
-    };
-
-    return this.candidatesService.create(dto, resumeText);
   }
 
   @Get()
@@ -76,8 +101,8 @@ export class CandidatesController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a candidate' })
-  delete(@Param('id') id: string) {
-    this.candidatesService.delete(id);
+  async delete(@Param('id') id: string) {
+    await this.candidatesService.delete(id);
     return { message: 'Candidate deleted' };
   }
 }

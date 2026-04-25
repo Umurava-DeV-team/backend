@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Post, Patch, Request, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { IsEnum } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsString } from 'class-validator';
+
 import { ApiProperty } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ApplicationsService } from './applications.service';
@@ -8,8 +9,11 @@ import { ApplicationStatus } from './application.schema';
 
 class ApplyDto {
   @ApiProperty({ example: '664f1a2b3c4d5e6f7a8b9c0d' })
+  @IsString()
+  @IsNotEmpty()
   jobId: string;
 }
+
 
 class UpdateStatusDto {
   @ApiProperty({ enum: ApplicationStatus })
@@ -27,8 +31,10 @@ export class ApplicationsController {
   @Post()
   @ApiOperation({ summary: 'Apply to a job (candidate)' })
   apply(@Request() req: any, @Body() dto: ApplyDto) {
+    console.log('[ApplicationsController] apply body:', dto);
     return this.applicationsService.apply(req.user.id, dto.jobId);
   }
+
 
   @Get('my')
   @ApiOperation({ summary: 'Get my applications (candidate)' })

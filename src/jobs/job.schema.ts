@@ -15,6 +15,9 @@ export class Job {
   title: string;
 
   @Prop({ required: true })
+  company: string;
+
+  @Prop({ required: true })
   department: string;
 
   @Prop({ required: true, enum: ExperienceLevel })

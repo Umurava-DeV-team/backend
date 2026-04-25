@@ -28,6 +28,12 @@ import { ProfileService } from './profile.service';
 export class ProfileController {
   constructor(private readonly profileService: ProfileService) {}
 
+  @Get('test')
+  @ApiOperation({ summary: 'Test route' })
+  test() {
+    return { message: 'Profile controller is reachable' };
+  }
+
   // ── Basic Info ──────────────────────────────────────────────────────────────
   @Get()
   @ApiOperation({ summary: 'Get full talent profile' })
@@ -150,6 +156,14 @@ export class ProfileController {
   @ApiOperation({ summary: 'Save social links' })
   updateSocialLinks(@Request() req: any, @Body() dto: UpdateSocialLinksDto) {
     return this.profileService.updateSocialLinks(req.user.id, dto);
+  }
+
+  @Post('resume')
+  @ApiOperation({ summary: 'Upload resume file' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('resume', { storage: memoryStorage() }))
+  uploadResume(@Request() req: any, @UploadedFile() file: Express.Multer.File) {
+    return this.profileService.updateResume(req.user.id, file);
   }
 
   // ── Security ────────────────────────────────────────────────────────────────

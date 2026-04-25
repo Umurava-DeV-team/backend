@@ -8,13 +8,18 @@ export enum SkillType {
   LANGUAGE = 'Language',
 }
 
-export enum Proficiency {
+export enum SkillLevel {
   BEGINNER = 'Beginner',
   INTERMEDIATE = 'Intermediate',
   ADVANCED = 'Advanced',
   EXPERT = 'Expert',
-  FLUENT = 'Fluent',
+}
+
+export enum LanguageProficiency {
+  BASIC = 'Basic',
   CONVERSATIONAL = 'Conversational',
+  FLUENT = 'Fluent',
+  NATIVE = 'Native',
 }
 
 export enum AvailabilityStatus {
@@ -35,7 +40,8 @@ export class Skill {
   _id?: Types.ObjectId;
   type: SkillType;
   name: string;
-  proficiency: Proficiency;
+  level?: SkillLevel; // For Skills
+  proficiency?: LanguageProficiency; // For Languages
   yearsOfExperience?: number;
 }
 
@@ -46,6 +52,7 @@ export class WorkExperience {
   startDate: string;
   endDate?: string;
   currentlyWorkHere: boolean;
+  status?: string; // e.g. "Is Current"
   description?: string;
   technologies: string[];
 }
@@ -70,7 +77,9 @@ export class Project {
   _id?: Types.ObjectId;
   projectName: string;
   role: string;
-  projectUrl?: string;
+  link?: string;
+  startDate?: string;
+  endDate?: string;
   description?: string;
   technologies: string[];
 }
@@ -88,7 +97,6 @@ export class Profile {
   @Prop({ default: '' }) location: string;
   @Prop({ default: '' }) bio: string;
   @Prop({ default: '' }) email: string;
-  @Prop({ default: '' }) mobileNumber: string;
 
   // Skills & Languages
   @Prop({
@@ -96,7 +104,8 @@ export class Profile {
       _id: { type: Types.ObjectId, default: () => new Types.ObjectId() },
       type: { type: String, enum: SkillType },
       name: String,
-      proficiency: { type: String, enum: Proficiency },
+      level: { type: String, enum: SkillLevel },
+      proficiency: { type: String, enum: LanguageProficiency },
       yearsOfExperience: Number,
     }],
     default: [],
@@ -112,6 +121,7 @@ export class Profile {
       startDate: String,
       endDate: String,
       currentlyWorkHere: { type: Boolean, default: false },
+      status: String,
       description: String,
       technologies: [String],
     }],
@@ -151,7 +161,9 @@ export class Profile {
       _id: { type: Types.ObjectId, default: () => new Types.ObjectId() },
       projectName: String,
       role: String,
-      projectUrl: String,
+      link: String,
+      startDate: String,
+      endDate: String,
       description: String,
       technologies: [String],
     }],
@@ -173,6 +185,9 @@ export class Profile {
   @Prop({ default: '' }) linkedin: string;
   @Prop({ default: '' }) github: string;
   @Prop({ default: '' }) personalPortfolio: string;
+
+  @Prop({ default: '' }) resumeUrl: string;
+  @Prop({ default: '' }) resumeName: string;
 }
 
 export const ProfileSchema = SchemaFactory.createForClass(Profile);

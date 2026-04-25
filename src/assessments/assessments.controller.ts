@@ -57,9 +57,29 @@ export class AssessmentsController {
     return this.assessmentsService.getMyAssessments(req.user.id);
   }
 
+  @Get()
+  @ApiOperation({ summary: 'List all assessments (Recruiter)' })
+  findAll() {
+    return this.assessmentsService.findAll();
+  }
+
+  @Get('job/:jobId')
+  @ApiOperation({ summary: 'List assessments for a job (Recruiter)' })
+  findByJob(@Param('jobId') jobId: string) {
+    return this.assessmentsService.findByJob(jobId);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get a specific assessment' })
   getAssessment(@Param('id') id: string) {
     return this.assessmentsService.getAssessment(id);
+  }
+
+  @Post(':id/delete')
+  @ApiOperation({ summary: 'Delete an assessment (Recruiter)' })
+  async deleteAssessment(@Param('id') id: string) {
+    console.log(`[AssessmentsController] Deleting assessment: ${id}`);
+    await this.assessmentsService.delete(id);
+    return { success: true, message: 'Assessment deleted' };
   }
 }

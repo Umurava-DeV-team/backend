@@ -34,13 +34,60 @@ export class ProfileService {
 
   private async getOrCreate(userId: string): Promise<ProfileDocument> {
     let profile = await this.profileModel.findOne({ userId: this.uid(userId) });
-    if (!profile) profile = await this.profileModel.create({ userId: this.uid(userId) });
+    if (!profile) {
+      const user = await this.userModel.findById(userId);
+      let firstName = '';
+      let lastName = '';
+      if (user?.name) {
+        const parts = user.name.split(' ');
+        firstName = parts[0] || '';
+        lastName = parts.slice(1).join(' ') || '';
+      }
+      profile = await this.profileModel.create({ 
+        userId: this.uid(userId),
+        firstName,
+        lastName,
+        email: user?.email || ''
+      });
+    } else {
+      // Backfill if empty
+      let updated = false;
+      if (!profile.firstName && !profile.lastName) {
+        const user = await this.userModel.findById(userId);
+        if (user?.name) {
+          const parts = user.name.split(' ');
+          profile.firstName = parts[0] || '';
+          profile.lastName = parts.slice(1).join(' ') || '';
+          updated = true;
+        }
+      }
+      if (!profile.email) {
+        const user = await this.userModel.findById(userId);
+        if (user?.email) {
+          profile.email = user.email;
+          updated = true;
+        }
+      }
+      if (updated) {
+        await profile.save();
+      }
+    }
     return profile;
   }
 
   // ── Basic Info ──────────────────────────────────────────────────────────────
   async getProfile(userId: string): Promise<ProfileDocument> {
     return this.getOrCreate(userId);
+  }
+
+  async findAll(): Promise<ProfileDocument[]> {
+    return this.profileModel.find().sort({ createdAt: -1 });
+  }
+
+  async findByUsers(userIds: string[]): Promise<ProfileDocument[]> {
+    return this.profileModel.find({
+      userId: { $in: userIds.map(id => new Types.ObjectId(id)) }
+    });
   }
 
   async updateBasicInfo(userId: string, dto: UpdateBasicInfoDto): Promise<ProfileDocument> {
@@ -220,5 +267,18 @@ export class ProfileService {
     user.passwordHash = await bcrypt.hash(dto.newPassword, 10);
     await user.save();
     return { message: 'Password updated successfully' };
+  }
+
+  async updateResume(userId: string, file: Express.Multer.File): Promise<ProfileDocument> {
+    return this.profileModel.findOneAndUpdate(
+      { userId: this.uid(userId) },
+      { 
+        $set: { 
+          resumeName: file.originalname,
+          resumeUrl: `uploads/resumes/${Date.now()}-${file.originalname}` 
+        } 
+      },
+      { new: true, upsert: true }
+    );
   }
 }
