@@ -1,17 +1,20 @@
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
-import { Assessment, AssessmentSchema } from './assessment.schema';
-import { AssessmentsService } from './assessments.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AssessmentsController } from './assessments.controller';
-import { JobsModule } from '../jobs/jobs.module';
+import { AssessmentsService } from './assessments.service';
+import { Assessment } from '../entities/assessment.entity';
+import { AssessmentAssignment } from '../entities/assessment-assignment.entity';
+
+import { ScreeningResult } from '../entities/screening-result.entity';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [
-    MongooseModule.forFeature([{ name: Assessment.name, schema: AssessmentSchema }]),
-    JobsModule,
-  ],
-  controllers: [AssessmentsController],
-  providers: [AssessmentsService],
-  exports: [AssessmentsService],
+    imports: [
+        TypeOrmModule.forFeature([Assessment, AssessmentAssignment, ScreeningResult]),
+        NotificationsModule
+    ],
+    controllers: [AssessmentsController],
+    providers: [AssessmentsService],
+    exports: [AssessmentsService],
 })
-export class AssessmentsModule {}
+export class AssessmentsModule { }
