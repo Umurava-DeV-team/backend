@@ -1,114 +1,158 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CreateCandidateDto, UpdateCandidateDto } from './candidate.dto';
-import { Candidate, CandidateDocument } from './candidate.schema';
-
-import { ProfileService } from '../profile/profile.service';
-import { ApplicationsService } from '../applications/applications.service';
+import { Candidate } from '../entities/candidate.entity';
+import { Application } from '../entities/application.entity';
+import { Profile } from '../entities/profile.entity';
 
 @Injectable()
 export class CandidatesService {
   constructor(
-    @InjectModel(Candidate.name) private candidateModel: Model<CandidateDocument>,
-    private readonly profileService: ProfileService,
-    private readonly applicationsService: ApplicationsService,
-  ) {}
+    @InjectRepository(Candidate)
+    private candidateRepo: Repository<Candidate>,
+    @InjectRepository(Application)
+    private applicationRepo: Repository<Application>,
+    @InjectRepository(Profile)
+    private profileRepo: Repository<Profile>,
+  ) { }
 
-
-  async create(dto: CreateCandidateDto, resumeText?: string): Promise<CandidateDocument> {
-    const candidate = new this.candidateModel({
+  async create(dto: CreateCandidateDto, resumeText?: string): Promise<Candidate> {
+    const candidate = this.candidateRepo.create({
       ...dto,
-      jobId: dto.jobId ? new Types.ObjectId(dto.jobId) : undefined,
       resumeText: resumeText ?? '',
     });
-    return candidate.save();
+    return await this.candidateRepo.save(candidate);
   }
 
-  async findByJob(jobId: string): Promise<any[]> {
-    const manual = await this.candidateModel.find({ jobId: new Types.ObjectId(jobId) }).sort({ createdAt: -1 });
-    // Aggregating portal applicants is handled by ScreeningService/ApplicationsService for specific jobs
-    return manual;
+  async findByJob(jobId: string): Promise<Candidate[]> {
+    return await this.candidateRepo.find({
+      where: { jobId },
+      order: { createdAt: 'DESC' },
+    });
   }
 
   async findOne(id: string): Promise<any> {
-    const candidate = await this.candidateModel.findById(id);
-    if (!candidate) {
-      // Try profile if not found in manual
-      try {
-        const profile = await this.profileService.getProfile(id); // assuming id is userId
-        return {
-          _id: profile.userId,
-          name: `${profile.firstName} ${profile.lastName}`,
-          email: profile.email,
-          skills: profile.skills.map(s => s.name),
-          currentRole: profile.headline,
-          location: profile.location,
-        };
-      } catch (e) {
-        throw new NotFoundException(`Talent ${id} not found`);
-      }
+    // 1. Try manual candidate repo
+    const candidate = await this.candidateRepo.findOne({ where: { id }, relations: ['job'] });
+    if (candidate) {
+      return {
+        _id: candidate.id,
+        name: candidate.name,
+        email: candidate.email,
+        currentRole: candidate.role || 'N/A',
+        location: candidate.location || 'Remote',
+        skills: candidate.skills || [],
+        experience: candidate.experience || '',
+        education: candidate.education || '',
+        summary: candidate.summary || '',
+        jobApplied: candidate.job?.title || 'Manual Entry',
+        source: 'manual',
+      };
     }
-    return candidate;
+
+    // 2. Try application repo or profile repo (portal users)
+    const profile = await this.profileRepo.findOne({ where: { userId: id } });
+    const application = await this.applicationRepo.findOne({
+      where: { candidateId: id },
+      relations: ['job', 'candidate'],
+    });
+
+    if (profile || application) {
+      const user = application?.candidate;
+      return {
+        _id: id,
+        name: profile ? `${profile.firstName} ${profile.lastName}` : user?.name || 'Unknown',
+        email: profile?.email || user?.email || '',
+        currentRole: profile?.headline || 'Portal Applicant',
+        location: profile?.location || 'Remote',
+        skills: profile?.skills?.map(s => s.name) || [],
+        experience: profile?.workExperience?.map(e => `${e.role} at ${e.companyName}`).join(', ') || '',
+        education: profile?.education?.map(e => `${e.degree} from ${e.institution}`).join(', ') || '',
+        summary: profile?.bio || '',
+        jobApplied: application?.job?.title || 'Portal Interest',
+        source: 'portal',
+      };
+    }
+
+    throw new NotFoundException(`Talent ${id} not found`);
   }
 
-  async update(id: string, dto: UpdateCandidateDto): Promise<CandidateDocument> {
-    const candidate = await this.candidateModel.findByIdAndUpdate(id, dto, { new: true });
+  async update(id: string, dto: UpdateCandidateDto): Promise<Candidate> {
+    const candidate = await this.candidateRepo.findOne({ where: { id } });
     if (!candidate) throw new NotFoundException(`Candidate ${id} not found`);
-    return candidate;
+
+    Object.assign(candidate, dto);
+    return await this.candidateRepo.save(candidate);
   }
 
   async findAll(): Promise<any[]> {
-    const manual = await this.candidateModel.find().sort({ createdAt: -1 }).lean();
-    const profiles = await this.profileService.findAll();
-    
-    const portalTalents = await Promise.all(profiles.map(async p => {
-      console.log(`[CandidatesService] Mapping portal talent: name=${p.firstName} ${p.lastName}, userId=${p.userId}`);
-      const apps = await this.applicationsService.getMyApplications(p.userId.toString());
-      console.log(`[CandidatesService] Found ${apps.length} applications for userId=${p.userId}`);
-      const jobTitles = apps.map(a => (a.jobId as any)?.title).filter(Boolean);
+    // 1. Get manual candidates
+    const manualCandidates = await this.candidateRepo.find({
+      order: { createdAt: 'DESC' },
+      relations: ['job'],
+    });
 
+    // 2. Get portal applicants
+    const applications = await this.applicationRepo.find({
+      relations: ['job', 'candidate'],
+      order: { appliedAt: 'DESC' },
+    });
 
-      return {
-        _id: p.userId,
-        name: `${p.firstName} ${p.lastName}`,
-        email: p.email,
-        skills: p.skills.map(s => s.name),
-        currentRole: p.headline,
-        location: p.location,
-        experience: p.workExperience.map(e => `${e.role} at ${e.companyName}`).join(', '),
-        education: p.education.map(e => `${e.degree} from ${e.institution}`).join(', '),
-        summary: p.bio || p.headline,
-        isPortalUser: true,
-        jobApplied: jobTitles.length > 0 ? jobTitles.join(', ') : 'Not Applied'
-      };
+    // 3. Get profiles for applicants
+    const applicantUserIds = applications.map(app => app.candidateId);
+    const profiles = await this.profileRepo.find({
+      where: applicantUserIds.map(userId => ({ userId })),
+    });
+
+    // 4. Transform manual candidates to unified format
+    const manualCandidatesFormatted = manualCandidates.map(c => ({
+      _id: c.id,
+      name: c.name,
+      email: c.email,
+      currentRole: c.role || 'N/A',
+      location: c.location || 'Remote',
+      skills: c.skills || [],
+      experience: c.experience || '',
+      education: c.education || '',
+      summary: c.summary || '',
+      jobApplied: c.job?.title || 'Manual Entry',
+      jobId: c.jobId,
+      source: 'manual',
+      createdAt: c.createdAt,
     }));
 
-    console.log(`[CandidatesService] Final list prepared. Total portal talents: ${portalTalents.length}`);
+    // 5. Transform portal applicants to unified format
+    const portalApplicantsFormatted = applications.map(app => {
+      const profile = profiles.find(p => p.userId === app.candidateId);
+      const user = app.candidate;
 
-    return [...manual, ...portalTalents];
+      return {
+        _id: app.id,
+        name: profile ? `${profile.firstName} ${profile.lastName}` : user?.name || 'Unknown',
+        email: profile?.email || user?.email || '',
+        currentRole: profile?.headline || 'Portal Applicant',
+        location: profile?.location || 'Remote',
+        skills: profile?.skills?.map(s => s.name) || [],
+        experience: profile?.workExperience?.map(e => `${e.role} at ${e.companyName}`).join(', ') || '',
+        education: profile?.education?.map(e => `${e.degree} from ${e.institution}`).join(', ') || '',
+        summary: profile?.bio || '',
+        jobApplied: app.job?.title || 'Unknown Job',
+        jobId: app.jobId,
+        source: 'portal',
+        applicationStatus: app.status,
+        createdAt: app.appliedAt,
+      };
+    });
 
+    // 6. Merge and return
+    return [...portalApplicantsFormatted, ...manualCandidatesFormatted];
   }
 
   async delete(id: string): Promise<void> {
-    const manual = await this.candidateModel.findById(id);
-    if (manual) {
-      await this.candidateModel.findByIdAndDelete(id);
-      return;
+    const result = await this.candidateRepo.delete(id);
+    if (result.affected === 0) {
+      throw new NotFoundException(`Candidate ${id} not found`);
     }
-
-    // Check if it's a portal user (User model)
-    try {
-      const profile = await this.profileService.getProfile(id);
-      if (profile) {
-        // We don't delete portal users from the global system via this endpoint
-        // For now, we'll just ignore or could return a specific message
-        return; 
-      }
-    } catch (e) {
-      // Not a portal user either
-    }
-
-    throw new NotFoundException(`Candidate ${id} not found`);
   }
 }
