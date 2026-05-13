@@ -141,9 +141,14 @@ Rules:
           summary: s.summary,
         };
       });
-    } catch (err) {
-      this.logger.error('Gemini scoring failed', err);
-      throw new InternalServerErrorException('AI scoring failed. Check your Gemini API key and quota.');
+    } catch (err: any) {
+      this.logger.error('Gemini scoring failed');
+      this.logger.error(`Error message: ${err.message}`);
+      if (err.cause) {
+        this.logger.error(`Error cause: ${err.cause.message || err.cause}`);
+        if (err.cause.code) this.logger.error(`Error code: ${err.cause.code}`);
+      }
+      throw new InternalServerErrorException(`AI scoring failed: ${err.message}. Check your internet connection and API key.`);
     }
   }
 
