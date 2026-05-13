@@ -4,8 +4,13 @@ import { IsString, IsNotEmpty, IsOptional, IsNumber, Min, Max } from 'class-vali
 export class ScreenJobDto {
   @ApiProperty({ example: 'job-uuid-here' })
   @IsString()
-  @IsNotEmpty()
+  @IsOptional() // Make optional to allow _id as fallback
   jobId: string;
+
+  @ApiPropertyOptional({ example: 'job-uuid-here' })
+  @IsString()
+  @IsOptional()
+  _id?: string;
 
   @ApiPropertyOptional({ example: 10, description: 'Number of top candidates to return (default 10)' })
   @IsNumber()
