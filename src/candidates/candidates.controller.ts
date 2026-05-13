@@ -21,7 +21,7 @@ import { CandidatesService } from './candidates.service';
 @ApiTags('Candidates')
 @Controller('candidates')
 export class CandidatesController {
-  constructor(private readonly candidatesService: CandidatesService) {}
+  constructor(private readonly candidatesService: CandidatesService) { }
 
   @Post()
   @ApiOperation({ summary: 'Add a candidate manually (with optional PDF resume)' })
@@ -62,14 +62,14 @@ export class CandidatesController {
       }
 
       const skillsStr = body.skills || '';
-      const skills = typeof skillsStr === 'string' 
+      const skills = typeof skillsStr === 'string'
         ? skillsStr.split(',').map((s: string) => s.trim()).filter(Boolean)
         : Array.isArray(skillsStr) ? skillsStr : [];
 
-      const dto: CreateCandidateDto = {
+      const dto: any = {
         name: body.name,
         email: body.email,
-        currentRole: body.currentRole || '',
+        role: body.currentRole || '',
         location: body.location || '',
         phone: body.phone || '',
         skills,
