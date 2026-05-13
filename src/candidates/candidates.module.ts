@@ -1,19 +1,17 @@
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { CandidatesController } from './candidates.controller';
-import { Candidate, CandidateSchema } from './candidate.schema';
+import { Candidate } from '../entities/candidate.entity';
+import { Application } from '../entities/application.entity';
+import { Profile } from '../entities/profile.entity';
 import { CandidatesService } from './candidates.service';
-import { ProfileModule } from '../profile/profile.module';
-import { ApplicationsModule } from '../applications/applications.module';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: Candidate.name, schema: CandidateSchema }]),
-    ProfileModule,
-    ApplicationsModule
+    TypeOrmModule.forFeature([Candidate, Application, Profile]),
   ],
   controllers: [CandidatesController],
   providers: [CandidatesService],
   exports: [CandidatesService],
 })
-export class CandidatesModule {}
+export class CandidatesModule { }
