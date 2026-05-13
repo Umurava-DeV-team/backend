@@ -1,35 +1,42 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { RegisterDto } from './auth.dto';
-import { User, UserDocument } from './user.schema';
+import { User } from '../entities/user.entity';
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
+  constructor(
+    @InjectRepository(User)
+    private userRepo: Repository<User>,
+  ) { }
 
-  async create(dto: RegisterDto): Promise<UserDocument> {
-    const existing = await this.userModel.findOne({ email: dto.email.toLowerCase() });
+  async create(dto: RegisterDto): Promise<User> {
+    const existing = await this.userRepo.findOne({
+      where: { email: dto.email.toLowerCase() }
+    });
     if (existing) throw new ConflictException('Email already registered');
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
-    const user = new this.userModel({
+    const user = this.userRepo.create({
       name: dto.name,
       email: dto.email.toLowerCase(),
       passwordHash,
       role: dto.role,
       company: dto.company,
     });
-    return user.save();
+    return await this.userRepo.save(user);
   }
 
-  async findByEmail(email: string): Promise<UserDocument | null> {
-    return this.userModel.findOne({ email: email.toLowerCase() });
+  async findByEmail(email: string): Promise<User | null> {
+    return await this.userRepo.findOne({
+      where: { email: email.toLowerCase() }
+    });
   }
 
-  async findById(id: string): Promise<UserDocument> {
-    const user = await this.userModel.findById(id);
+  async findById(id: string): Promise<User> {
+    const user = await this.userRepo.findOne({ where: { id } });
     if (!user) throw new NotFoundException('User not found');
     return user;
   }
