@@ -5,7 +5,7 @@ import { IsEnum, IsNotEmpty, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ApplicationsService } from './applications.service';
-import { ApplicationStatus } from './application.schema';
+import { ApplicationStatus } from '../entities/application.entity';
 
 class ApplyDto {
   @ApiProperty({ example: '664f1a2b3c4d5e6f7a8b9c0d' })
@@ -26,7 +26,7 @@ class UpdateStatusDto {
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT')
 export class ApplicationsController {
-  constructor(private readonly applicationsService: ApplicationsService) {}
+  constructor(private readonly applicationsService: ApplicationsService) { }
 
   @Post()
   @ApiOperation({ summary: 'Apply to a job (candidate)' })
