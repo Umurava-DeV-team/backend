@@ -1,12 +1,10 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CandidatesService } from '../candidates/candidates.service';
 import { JobsService } from '../jobs/jobs.service';
 import { GeminiService } from './gemini.service';
-import { ScreeningResult } from './screening.dto';
-import { ScreeningResultDocument, ScreeningResultModel } from './screening-result.schema';
-
+import { ScreeningResult, ScreeningMatch } from '../entities/screening-result.entity';
 import { AssessmentsService } from '../assessments/assessments.service';
 import { ApplicationsService } from '../applications/applications.service';
 import { ProfileService } from '../profile/profile.service';
@@ -14,32 +12,40 @@ import { ProfileService } from '../profile/profile.service';
 @Injectable()
 export class ScreeningService {
   constructor(
-    @InjectModel(ScreeningResultModel.name) private screeningResultModel: Model<ScreeningResultDocument>,
+    @InjectRepository(ScreeningResult)
+    private screeningResultRepo: Repository<ScreeningResult>,
     private readonly jobsService: JobsService,
     private readonly candidatesService: CandidatesService,
     private readonly geminiService: GeminiService,
     private readonly assessmentsService: AssessmentsService,
     private readonly applicationsService: ApplicationsService,
     private readonly profileService: ProfileService,
-  ) {}
+  ) { }
 
   async screenJob(jobId: string, topN = 10): Promise<ScreeningResult> {
+    console.log(`[ScreeningService] Starting screening for jobId=${jobId}, topN=${topN}`);
+
     const job = await this.jobsService.findOne(jobId);
-    
+    console.log(`[ScreeningService] Job found: ${job.title}`);
+
     // 1. Fetch Manual Candidates
     const manualCandidates = await this.candidatesService.findByJob(jobId);
-    
+    console.log(`[ScreeningService] Found ${manualCandidates.length} manual candidates`);
+
     // 2. Fetch Portal Applicants
     const applications = await this.applicationsService.getApplicationsForJob(jobId);
-    const applicantUserIds = applications.map(a => 
-      (a.candidateId as any)._id?.toString() || a.candidateId.toString()
-    );
+    console.log(`[ScreeningService] Found ${applications.length} portal applications`);
+
+    const applicantUserIds = applications.map(a => a.candidateId);
+    console.log(`[ScreeningService] Applicant user IDs:`, applicantUserIds);
+
     const applicantProfiles = await this.profileService.findByUsers(applicantUserIds);
+    console.log(`[ScreeningService] Found ${applicantProfiles.length} profiles`);
 
     // 3. Unify Data for AI
     const combined: any[] = [
       ...manualCandidates.map(c => ({
-        id: c._id.toString(),
+        id: c.id,
         name: c.name,
         email: c.email,
         skills: c.skills,
@@ -49,12 +55,11 @@ export class ScreeningService {
         resumeText: c.resumeText,
       })),
       ...applications.map(app => {
-        const user = app.candidateId as any;
-        const profile = applicantProfiles.find(p => p.userId.toString() === user._id?.toString());
+        const profile = applicantProfiles.find(p => p.userId === app.candidateId);
         return {
-          id: user._id?.toString() || user.toString(),
-          name: profile ? `${profile.firstName} ${profile.lastName}` : user.name,
-          email: profile?.email || user.email,
+          id: app.candidateId,
+          name: profile ? `${profile.firstName} ${profile.lastName}` : app.candidate?.name || 'Unknown',
+          email: profile?.email || app.candidate?.email || '',
           skills: profile?.skills?.map(s => s.name) || [],
           experience: profile?.workExperience?.map(e => `${e.role} at ${e.companyName}`).join(', ') || '',
           education: profile?.education?.map(e => `${e.degree} from ${e.institution}`).join(', ') || '',
@@ -64,94 +69,67 @@ export class ScreeningService {
       })
     ];
 
+    console.log(`[ScreeningService] Combined ${combined.length} total candidates for screening`);
+
     if (combined.length === 0) {
+      console.error(`[ScreeningService] ERROR: No candidates found for jobId=${jobId}`);
       throw new BadRequestException('No candidates or applicants found for this job');
     }
 
+    console.log(`[ScreeningService] Calling Gemini AI to score candidates...`);
     const scores = await this.geminiService.scoreCandidates(job, combined);
+    console.log(`[ScreeningService] Received ${scores.length} scores from Gemini`);
 
     const shortlist = scores
       .sort((a, b) => b.matchScore - a.matchScore)
       .slice(0, topN);
 
-    // Assessments are now only created when explicitly launched by the recruiter via launchAssessment
+    console.log(`[ScreeningService] Created shortlist of ${shortlist.length} candidates`);
 
-
-    const result: ScreeningResult = {
+    const result = this.screeningResultRepo.create({
       jobId,
       jobTitle: job.title,
       totalCandidates: combined.length,
       shortlist,
       screenedAt: new Date(),
-    };
+    });
 
     // Persist result to database
-    await this.screeningResultModel.create(result);
+    console.log(`[ScreeningService] Saving screening result to database...`);
+    await this.screeningResultRepo.save(result);
+    console.log(`[ScreeningService] Screening completed successfully for jobId=${jobId}`);
 
     return result;
   }
 
   async getScreeningHistory(jobId: string): Promise<ScreeningResult[]> {
-    const results = await this.screeningResultModel
-      .find({ jobId })
-      .sort({ createdAt: -1 })
-      .exec();
-    
-    return results.map(r => ({
-      jobId: r.jobId,
-      jobTitle: r.jobTitle,
-      totalCandidates: r.totalCandidates,
-      shortlist: r.shortlist as any,
-      screenedAt: r.screenedAt
-    }));
+    return this.screeningResultRepo.find({
+      where: { jobId },
+      order: { createdAt: 'DESC' },
+    });
   }
 
   async getAllScreenings(): Promise<ScreeningResult[]> {
-    const results = await this.screeningResultModel
-      .find()
-      .sort({ createdAt: -1 })
-      .exec();
-    
-    return results.map(r => ({
-      jobId: r.jobId,
-      jobTitle: r.jobTitle,
-      totalCandidates: r.totalCandidates,
-      shortlist: r.shortlist as any,
-      screenedAt: r.screenedAt
-    }));
+    return this.screeningResultRepo.find({
+      order: { createdAt: 'DESC' },
+    });
   }
 
 
-  async launchAssessment(jobId: string, topN: number, candidateIds: string[], timeLimitPerQuestion: number = 30): Promise<{ message: string; created: number }> {
+  async createAssessmentDraft(jobId: string, userId: string): Promise<any> {
     const job = await this.jobsService.findOne(jobId);
+    console.log(`[ScreeningService] Creating assessment draft for job: ${job.title}`);
 
+    // Generate draft using AssessmentsService
+    // We pass job title and description as the basis for AI question generation
+    const assessment = await this.assessmentsService.generateDraftAssessment(
+      jobId,
+      job.title,
+      job.description || job.title,
+      userId
+    );
 
-    // Use the pre-ranked candidate IDs passed from the frontend — no re-scoring needed
-    const targetIds = candidateIds.slice(0, topN);
-
-    if (targetIds.length === 0) {
-      throw new BadRequestException('No candidate IDs provided for assessment launch');
-    }
-
-    // Generate AI assessment questions for this job
-    let questions: any[] = [];
-    try {
-      questions = await this.geminiService.generateAssessmentQuestions(job);
-    } catch (e) {
-      console.error('Failed to generate assessment questions:', e.message);
-    }
-
-    // Create assessments for each target candidate
-    let created = 0;
-    for (const candidateId of targetIds) {
-      try {
-        await this.assessmentsService.startTalentAssessment(candidateId, jobId, questions, timeLimitPerQuestion);
-        created++;
-      } catch (e) {
-        console.error(`Skipping duplicate/failed assessment for ${candidateId}:`, e.message);
-      }
-    }
-
-    return { message: `Assessment launched for ${created} candidates`, created };
+    console.log(`[ScreeningService] Draft assessment created: ${assessment.id}`);
+    return assessment;
   }
 }
