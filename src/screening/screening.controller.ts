@@ -1,4 +1,5 @@
-import { Body, Controller, Post, UploadedFile, UseInterceptors, Get, Param, Query } from '@nestjs/common';
+import { Body, Controller, Post, UploadedFile, UseInterceptors, Get, Param, Query, BadRequestException, UseGuards, Request } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { memoryStorage } from 'multer';
@@ -17,16 +18,29 @@ export class ScreeningController {
     private readonly screeningService: ScreeningService,
     private readonly candidatesService: CandidatesService,
     private readonly jobsService: JobsService,
-  ) {}
+  ) { }
 
   @Post('run')
   @ApiOperation({ summary: 'Run AI screening for a job — returns ranked shortlist' })
   async run(@Body() dto: ScreenJobDto) {
-    console.log('Screening request received:', dto);
+    const finalJobId = dto.jobId || dto._id;
+    
+    console.log('[ScreeningController] Screening request received:', JSON.stringify(dto));
+    console.log('[ScreeningController] finalJobId type:', typeof finalJobId, 'value:', finalJobId);
+    console.log('[ScreeningController] Raw DTO:', dto);
+
+    if (!finalJobId) {
+      console.error('[ScreeningController] ERROR: jobId and _id are both missing or undefined');
+      throw new BadRequestException('jobId or _id is required');
+    }
+
     try {
-      return await this.screeningService.screenJob(dto.jobId, dto.topN ?? 10);
+      const result = await this.screeningService.screenJob(finalJobId, dto.topN ?? 10);
+      console.log('[ScreeningController] Screening completed successfully');
+      return result;
     } catch (err) {
-      console.error('Screening failed:', err.message);
+      console.error('[ScreeningController] Screening failed:', err.message);
+      console.error('[ScreeningController] Error stack:', err.stack);
       throw err;
     }
   }
@@ -43,15 +57,16 @@ export class ScreeningController {
     return await this.screeningService.getAllScreenings();
   }
 
-  @Post('launch-assessment')
-  @ApiOperation({ summary: 'Generate AI questions and send assessments to top N candidates for a job' })
-  async launchAssessment(@Body() body: { jobId: string; topN: number; candidateIds: string[]; timeLimitPerQuestion?: number }) {
-    console.log('Assessment launch request:', { jobId: body.jobId, topN: body.topN, count: body.candidateIds?.length, time: body.timeLimitPerQuestion });
+  @Post('create-assessment')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Generate AI questions and create a draft assessment for a job' })
+  async createAssessment(@Body() body: { jobId: string }, @Request() req: any) {
+    const userId = req.user?.id || req.user?.userId;
+    console.log('Assessment creation request:', { jobId: body.jobId, userId });
     try {
-      return await this.screeningService.launchAssessment(body.jobId, body.topN ?? 5, body.candidateIds ?? [], body.timeLimitPerQuestion ?? 30);
+      return await this.screeningService.createAssessmentDraft(body.jobId, userId);
     } catch (err) {
-
-      console.error('Assessment launch failed:', err.message);
+      console.error('Assessment creation failed:', err.message);
       throw err;
     }
   }
