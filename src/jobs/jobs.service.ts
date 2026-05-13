@@ -1,104 +1,104 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CreateJobDto, UpdateJobDto } from './job.dto';
-import { Job, JobDocument } from './job.schema';
-
+import { Job } from '../entities/job.entity';
+import { Application } from '../entities/application.entity';
+import { Candidate } from '../entities/candidate.entity';
 
 @Injectable()
 export class JobsService {
-  constructor(@InjectModel(Job.name) private jobModel: Model<JobDocument>) {}
+  constructor(
+    @InjectRepository(Job)
+    private jobRepo: Repository<Job>,
+    @InjectRepository(Application)
+    private applicationRepo: Repository<Application>,
+    @InjectRepository(Candidate)
+    private candidateRepo: Repository<Candidate>,
+  ) { }
 
-  async create(dto: CreateJobDto, file?: Express.Multer.File): Promise<JobDocument> {
-    const job = new this.jobModel(dto);
-    return job.save();
+  async create(dto: CreateJobDto, file?: Express.Multer.File): Promise<any> {
+    const job = this.jobRepo.create(dto);
+    const saved = await this.jobRepo.save(job);
+
+    // Ensure both 'id' and '_id' are returned for compatibility
+    return {
+      ...saved,
+      _id: saved.id,
+      applicantCount: 0,
+    };
   }
 
   async findAll(): Promise<any[]> {
-    const results = await this.jobModel.aggregate([
-      {
-        $lookup: {
-          from: 'applications',
-          localField: '_id',
-          foreignField: 'jobId',
-          as: 'applications'
-        }
-      },
-      {
-        $lookup: {
-          from: 'candidates',
-          localField: '_id',
-          foreignField: 'jobId',
-          as: 'candidates'
-        }
-      },
-      {
-        $addFields: {
-          applicantCount: {
-            $add: [{ $size: '$applications' }, { $size: '$candidates' }]
-          }
-        }
-      },
-      {
-        $project: {
-          applications: 0,
-          candidates: 0
-        }
-      },
-      { $sort: { createdAt: -1 } }
-    ]);
+    const jobs = await this.jobRepo.find({
+      order: { createdAt: 'DESC' },
+      relations: ['creator'],
+    });
 
-    console.log(`[JobsService] findAll results sample:`, results.slice(0, 2).map(r => ({ title: r.title, count: r.applicantCount })));
-    return results;
+    // Calculate applicant count for each job
+    const jobsWithCounts = await Promise.all(
+      jobs.map(async (job) => {
+        const applicationCount = await this.applicationRepo.count({
+          where: { jobId: job.id },
+        });
+        const candidateCount = await this.candidateRepo.count({
+          where: { jobId: job.id },
+        });
+
+        // Ensure both 'id' and '_id' are returned for compatibility
+        return {
+          ...job,
+          _id: job.id,
+          applicantCount: applicationCount + candidateCount,
+        };
+      })
+    );
+
+    return jobsWithCounts;
   }
 
   async findOne(id: string): Promise<any> {
-    const jobs = await this.jobModel.aggregate([
-      { $match: { _id: new Types.ObjectId(id) } },
+    const job = await this.jobRepo.findOne({
+      where: { id },
+      relations: ['creator'],
+    });
 
+    if (!job) throw new NotFoundException(`Job ${id} not found`);
 
-      {
-        $lookup: {
-          from: 'applications',
-          localField: '_id',
-          foreignField: 'jobId',
-          as: 'applications'
-        }
-      },
-      {
-        $lookup: {
-          from: 'candidates',
-          localField: '_id',
-          foreignField: 'jobId',
-          as: 'candidates'
-        }
-      },
-      {
-        $addFields: {
-          applicantCount: {
-            $add: [{ $size: '$applications' }, { $size: '$candidates' }]
-          }
-        }
-      },
-      {
-        $project: {
-          applications: 0,
-          candidates: 0
-        }
-      }
-    ]);
-    if (!jobs || jobs.length === 0) throw new NotFoundException(`Job ${id} not found`);
-    return jobs[0];
+    // Calculate applicant count
+    const applicationCount = await this.applicationRepo.count({
+      where: { jobId: id },
+    });
+    const candidateCount = await this.candidateRepo.count({
+      where: { jobId: id },
+    });
+
+    // Ensure both 'id' and '_id' are returned for compatibility
+    return {
+      ...job,
+      _id: job.id,
+      applicantCount: applicationCount + candidateCount,
+    };
   }
 
-  async update(id: string, dto: UpdateJobDto, _file?: Express.Multer.File): Promise<JobDocument> {
-    const job = await this.jobModel.findByIdAndUpdate(id, dto, { new: true });
+  async update(id: string, dto: UpdateJobDto, _file?: Express.Multer.File): Promise<any> {
+    const job = await this.jobRepo.findOne({ where: { id } });
     if (!job) throw new NotFoundException(`Job ${id} not found`);
-    return job;
+
+    Object.assign(job, dto);
+    const updated = await this.jobRepo.save(job);
+
+    // Ensure both 'id' and '_id' are returned for compatibility
+    return {
+      ...updated,
+      _id: updated.id,
+    };
   }
 
   async delete(id: string): Promise<void> {
-    const result = await this.jobModel.findByIdAndDelete(id);
-    if (!result) throw new NotFoundException(`Job ${id} not found`);
+    const result = await this.jobRepo.delete(id);
+    if (result.affected === 0) {
+      throw new NotFoundException(`Job ${id} not found`);
+    }
   }
 }
