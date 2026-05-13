@@ -1,19 +1,18 @@
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
-import { Profile, ProfileSchema } from './profile.schema';
-import { ProfileService } from './profile.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { ProfileController } from './profile.controller';
-import { User, UserSchema } from '../auth/user.schema';
+import { ProfileService } from './profile.service';
+import { Profile } from '../entities/profile.entity';
+import { User } from '../entities/user.entity';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([
-      { name: Profile.name, schema: ProfileSchema },
-      { name: User.name, schema: UserSchema },
-    ]),
+    TypeOrmModule.forFeature([Profile, User]),
+    AuthModule,
   ],
   controllers: [ProfileController],
   providers: [ProfileService],
   exports: [ProfileService],
 })
-export class ProfileModule {}
+export class ProfileModule { }
