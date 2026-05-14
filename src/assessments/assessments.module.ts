@@ -7,11 +7,13 @@ import { AssessmentAssignment } from '../entities/assessment-assignment.entity';
 
 import { ScreeningResult } from '../entities/screening-result.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
     imports: [
         TypeOrmModule.forFeature([Assessment, AssessmentAssignment, ScreeningResult]),
-        NotificationsModule
+        NotificationsModule,
+        AuthModule
     ],
     controllers: [AssessmentsController],
     providers: [AssessmentsService],
