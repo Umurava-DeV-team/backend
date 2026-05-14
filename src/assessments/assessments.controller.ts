@@ -11,6 +11,8 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AssessmentsService } from './assessments.service';
+import { UsersService } from '../auth/users.service';
+import { UserRole } from '../entities/user.entity';
 import {
     GenerateDraftDto,
     UpdateAssessmentDto,
@@ -29,7 +31,8 @@ import { ConfigService } from '@nestjs/config';
 export class AssessmentsController {
     constructor(
         private readonly assessmentsService: AssessmentsService,
-        private readonly configService: ConfigService
+        private readonly configService: ConfigService,
+        private readonly usersService: UsersService,
     ) { }
 
     // ==================== RECRUITER ENDPOINTS ====================
@@ -45,8 +48,10 @@ export class AssessmentsController {
         summary: 'Generate draft assessment from AI (Step 1: Create draft for review)',
     })
     async generateDraft(@Body() dto: GenerateDraftDto) {
-        // TODO: Get userId from JWT token
-        const userId = this.configService.get('TEST_RECRUITER_ID') || 'f9ef13fb-2754-4d5a-9b92-19f1a959a0a5';
+        // Fetch first recruiter from DB if not provided in env
+        const userId = this.configService.get('TEST_RECRUITER_ID') || 
+                      (await this.usersService.findFirstByRole(UserRole.RECRUITER))?.id || '';
+        
         return await this.assessmentsService.generateDraftAssessment(
             dto.jobId,
             dto.jobTitle,
@@ -76,12 +81,15 @@ export class AssessmentsController {
     @Get('my/assignments')
     @ApiOperation({ summary: 'Get my assigned assessments (candidate view)' })
     async getMyAssignments(@Query('candidateId') candidateId: string) {
-        // TODO: Get candidateId from JWT token
-        const id = candidateId || this.configService.get('TEST_CANDIDATE_ID') || '';
+        // Fetch first candidate from DB if not provided
+        const id = candidateId || 
+                  this.configService.get('TEST_CANDIDATE_ID') || 
+                  (await this.usersService.findFirstByRole(UserRole.CANDIDATE))?.id || '';
         const assignments = await this.assessmentsService.getMyCandidateAssignments(id);
         
         // Map to structure expected by frontend (legacy compatibility)
         return assignments.map(a => ({
+            id: a.id,
             _id: a.id,
             jobId: a.assessment.job,
             status: a.status,
@@ -91,6 +99,7 @@ export class AssessmentsController {
             title: a.assessment.title,
             durationMinutes: a.assessment.durationMinutes,
             percentage: a.percentage,
+            passed: a.passed,
         }));
     }
 
@@ -132,8 +141,10 @@ export class AssessmentsController {
         summary: 'Launch assessment (Step 3: Confirm and send to candidates)',
     })
     async launchAssessment(@Param('id') id: string, @Body() dto: LaunchAssessmentDto) {
-        // TODO: Get userId from JWT token
-        const userId = this.configService.get('TEST_RECRUITER_ID') || 'f9ef13fb-2754-4d5a-9b92-19f1a959a0a5';
+        // Fetch first recruiter from DB if not provided
+        const userId = this.configService.get('TEST_RECRUITER_ID') || 
+                      (await this.usersService.findFirstByRole(UserRole.RECRUITER))?.id || '';
+        
         return await this.assessmentsService.launchAssessment(
             id,
             dto.candidateIds ?? [],
