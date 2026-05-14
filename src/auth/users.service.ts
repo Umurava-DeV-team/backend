@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { RegisterDto } from './auth.dto';
-import { User } from '../entities/user.entity';
+import { User, UserRole } from '../entities/user.entity';
 
 @Injectable()
 export class UsersService {
@@ -39,6 +39,13 @@ export class UsersService {
     const user = await this.userRepo.findOne({ where: { id } });
     if (!user) throw new NotFoundException('User not found');
     return user;
+  }
+
+  async findFirstByRole(role: UserRole): Promise<User | null> {
+    return await this.userRepo.findOne({
+      where: { role },
+      order: { createdAt: 'ASC' }
+    });
   }
 
   async validatePassword(plain: string, hash: string): Promise<boolean> {
