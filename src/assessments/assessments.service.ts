@@ -176,6 +176,7 @@ export class AssessmentsService {
         // Map for frontend compatibility (slice expects _id and specific fields)
         return assignments.map(a => ({
             ...a,
+            id: a.id,
             _id: a.id,
             jobId: a.assessment?.job,
             title: a.assessment?.title,
